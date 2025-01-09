@@ -10,8 +10,8 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 
 
-class GoldPricePredictor:
-    def __init__(self, ticker="GLD", lookback_days=365 * 3):  # 3 years of historical data
+class ExchangeRatePredictor:
+    def __init__(self, ticker="MXN=X", lookback_days=365 * 3):  # 3 years of historical data
         self.ticker = ticker
         self.lookback_days = lookback_days
         self.model = None
@@ -35,7 +35,7 @@ class GoldPricePredictor:
         df['month'] = df.index.month  # Month of the year
         df['day_of_year'] = df.index.dayofyear  # Day of the year
         
-        df['next_day_price'] = df['Close'].shift(-1)
+        df['next_day_rate'] = df['Close'].shift(-1)
         return df.dropna()
     
     def train_model(self, train_size=0.8):
@@ -43,7 +43,7 @@ class GoldPricePredictor:
         df = self.prepare_features(df)
         
         X = df[['S_3', 'S_9', 'volatility', 'day_of_week', 'month', 'day_of_year']]
-        y = df['next_day_price']
+        y = df['next_day_rate']
         
         split_idx = int(train_size * len(df))
         X_train, X_test = X[:split_idx], X[split_idx:]
@@ -55,7 +55,7 @@ class GoldPricePredictor:
         test_predictions = self.model.predict(X_test)
         self.last_predictions = pd.DataFrame(test_predictions, 
                                              index=y_test.index, 
-                                             columns=['predicted_price'])
+                                             columns=['predicted_rate'])
         
         metrics = {
             'MSE': mean_squared_error(y_test, test_predictions),
@@ -78,58 +78,58 @@ class GoldPricePredictor:
         future_data['month'] = future_data.index.month
         future_data['day_of_year'] = future_data.index.dayofyear
         
-        last_close = self.last_predictions['predicted_price'].iloc[-1]
+        last_close = self.last_predictions['predicted_rate'].iloc[-1]
         
-        future_prices = []
+        future_rates = []
         for i in range(months):
             row = future_data.iloc[i]
             features = np.array([
-                last_close, last_close, np.std(future_prices[-5:]) if len(future_prices) >= 5 else 0,
+                last_close, last_close, np.std(future_rates[-5:]) if len(future_rates) >= 5 else 0,
                 row['day_of_week'], row['month'], row['day_of_year']
             ]).reshape(1, -1)
             
-            predicted_price = self.model.predict(features)[0]
-            future_prices.append(predicted_price)
-            last_close = predicted_price
+            predicted_rate = self.model.predict(features)[0]
+            future_rates.append(predicted_rate)
+            last_close = predicted_rate
         
-        future_data['predicted_price'] = future_prices
+        future_data['predicted_rate'] = future_rates
         return future_data
 
 
 def main():
-    st.set_page_config(page_title="Gold ETF Price Prediction", layout="wide")
+    st.set_page_config(page_title="MXN-USD Exchange Rate Prediction", layout="wide")
     
-    st.title("Gold ETF Price Prediction for 2025")
-    st.markdown("This app predicts Gold ETF (GLD) prices using a linear regression model.")
+    st.title("MXN-USD Exchange Rate Prediction for 2025")
+    st.markdown("This app predicts the MXN-USD exchange rate using a linear regression model. By Rob Ugalde")
     
     lookback_days = 365 * 3
     train_size = 0.8
     
-    predictor = GoldPricePredictor(lookback_days=lookback_days)
+    predictor = ExchangeRatePredictor(lookback_days=lookback_days)
     
     with st.spinner("Training model..."):
-        metrics, actual_prices, predictions = predictor.train_model(train_size=train_size)
+        metrics, actual_rates, predictions = predictor.train_model(train_size=train_size)
         future_forecast = predictor.forecast_future(months=12)
     
     # Plot historical vs predicted
     fig = go.Figure()
     fig.add_trace(go.Scatter(
-        x=actual_prices.index, y=actual_prices.values,
-        name="Actual Price", line=dict(color="blue")
+        x=actual_rates.index, y=actual_rates.values,
+        name="Actual Rate", line=dict(color="blue")
     ))
     fig.add_trace(go.Scatter(
-        x=predictions.index, y=predictions['predicted_price'],
-        name="Predicted Price", line=dict(color="red")
+        x=predictions.index, y=predictions['predicted_rate'],
+        name="Predicted Rate", line=dict(color="red")
     ))
     fig.add_trace(go.Scatter(
-        x=future_forecast.index, y=future_forecast['predicted_price'],
-        name="Forecasted Price (2025)", line=dict(color="green", dash='dash')
+        x=future_forecast.index, y=future_forecast['predicted_rate'],
+        name="Forecasted Rate (2025)", line=dict(color="green", dash='dash')
     ))
     
     fig.update_layout(
-        title="Gold ETF Price Prediction and 12-Month Forecast",
+        title="MXN-USD Exchange Rate Prediction and 12-Month Forecast",
         xaxis_title="Date",
-        yaxis_title="Price",
+        yaxis_title="Exchange Rate",
         hovermode='x unified',
         height=500
     )
@@ -142,16 +142,17 @@ def main():
     col3.metric("Root Mean Squared Error", f"{metrics['RMSE']:.2f}")
     col4.metric("R² Score", f"{metrics['R²']:.4f}")
     
-    st.header("12-Month Price Forecast")
-    st.dataframe(future_forecast[['predicted_price']].rename(columns={'predicted_price': 'Forecasted Price'}))
+    st.header("12-Month Exchange Rate Forecast")
+    st.dataframe(future_forecast[['predicted_rate']].rename(columns={'predicted_rate': 'Forecasted Rate'}))
     
     st.download_button(
         label="Download Forecast Results",
         data=future_forecast.to_csv().encode('utf-8'),
-        file_name='gold_forecast_2025.csv',
+        file_name='mxn_usd_forecast_2025.csv',
         mime='text/csv'
     )
 
 
 if __name__ == "__main__":
     main()
+
