@@ -1,6 +1,14 @@
-# 🎈 Blank app template
+# This APP provides a MXN-USD exchange Rate Prediction
 
-A simple Streamlit app template for you to modify!
+To see the RENDER DEPLOYMENT GO TO :
+
+https://mxn-usd-predictor.onrender.com/
+
+
+![alt text](image.png)
+
+
+
 
 [![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://blank-app-template.streamlit.app/)
 
